@@ -1,0 +1,62 @@
+/* maxqosim Maxima package for open quantum systems
+ *
+ * Copyright 2020 by Kostas Blekos, eelvex@gmail.com
+ *
+ * Released under the terms of the GNU General Public License
+ *
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+ */
+/*
+;  Quantum computing  ;
+*/
+
+qc_h: 1/sqrt(2)*matrix([1,1],[1,-1]);
+qc_x: matrix([0,1],[1,0]);
+qc_y: matrix([0,-%i],[%i,0]);
+qc_z: matrix([1,0],[0,-1]);
+qc_s: matrix([1,0],[0,%i]);
+qc_t: matrix([1,0],[0,exp(%i*%pi/4)]);
+qc_L(g):= genmatrix(lambda([i,j],if(i>2 and j>2) then g[i-2,j-2] else (if (i=j) then 1 else 0)), 4);
+qc_cx : qc_L(x); qc_cy: qc_L(y); qc_cz: qc_L(z); 
+/* cx: matrix([1,0,0,0],[0,1,0,0],[0,0,0,1],[0,0,1,0]); */
+/* cz: matrix([1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,-1]); */
+/* cy: matrix([1,0,0,0],[0,1,0,0],[0,0,0,-%i],[0,0,%i,0]); */
+/* cu: matrix([1,0,0,0],[0,1,0,0],[0,0,u11,u12],[0,0,u21,u22]); */
+qc_swap: matrix([1,0,0,0],[0,0,1,0],[0,1,0,0],[0,0,0,1]);
+qc_ccx: ident(8)$ ccx[8,8]: 0$ ccx[7,7]: 0; ccx[8,7]:1 ; ccx[7,8]:1$
+
+/* roots of unity */
+qc_wn(n) := exp(-2*%i*%pi/n);
+/* Fourier transform */
+qc_fn(n):= 1/sqrt(n)*genmatrix(lambda([i,j],wn(n)^((i-1)*(j-1))) , n);
+/* Clock */
+qc_clk(n):=genmatrix(lambda([i,j],if (i=j) then wn(n)^(i-1) else 0), n);
+
+/* Rotation matrices */
+qc_rx(t):= matrix([cos(t/2), -%i*sin(t/2)],
+               [-%i*sin(t/2), cos(t/2)]);
+qc_ry(t):= matrix([cos(t/2), -sin(t/2)],
+               [sin(t/2), cos(t/2)]);
+qc_rz(t):= matrix([exp(-%i*t/2), 0],
+               [0, exp(%i*t/2)]);
+qc_rp(t):= matrix([1, 0],
+               [0, exp(%i*t)]);
+
+qc_u1(lam):= matrix([1,0],[0,exp(%i*lam)]);
+qc_u2(phi,lam):= matrix([1,-exp(%i*lam)],[exp(%i*phi),exp(%i*lam + %i*phi)]);
+qc_u3(theta,phi,lam):= matrix([cos(theta/2),-exp(%i*lam)*sin(theta/2)],[exp(%i*phi)*sin(theta/2),cos(theta/2)*exp(%i*lam + %i*phi)]);
+
+
+/* EOF */

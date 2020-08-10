@@ -1,0 +1,62 @@
+/* maxqosim Maxima package for open quantum systems
+ *
+ * Copyright 2020 by Kostas Blekos, eelvex@gmail.com
+ *
+ * Released under the terms of the GNU General Public License
+ *
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+ */
+
+greek_lower[utf]: [ α , β , γ , δ , ε , ζ , η , θ , ι , κ , λ , μ , ν , ξ , ο , π , ρ , σ , τ , υ , φ , χ , ψ , ω ]$
+greek_lower[lit]: [ alpha, beta, gamma, delta, epsilon, zeta, eta, theta, iota, kappa, lambda, mu, nu, xi, omikron, pi, rho, sigma, tau, upsilon, phi, xi, psi, omega]$
+greek_upper[utf]: [ Α , Β , Γ , Δ , Ε , Ζ , Η , Θ , Ι , Κ , Λ , Μ , Ν , Ξ , Ο , Π , Ρ , Σ , Τ , Υ , Φ , Χ , Ψ , Ω ]$
+greek_upper[lit]: [ Alpha, Beta, Gamma, Delta, Epsilon, Zeta, Eta, Theta, Iota, Kappa, Lambda, Mu, Nu, Xi, Omikron, Pi, Rho, Sigma, Tau, Upsilon, Phi, Xi, Psi, Omega]$
+/* greek_lower[utf] :: greek_lower[lit] */
+/* greek_upper[utf] :: greek_upper[lit] */
+
+map(lambda([inp], for i:1 thru length(inp['utf]) do 
+    texput(string(inp['utf][i]), concat("\\", string(inp['lit][i])))), 
+    [greek_lower, greek_upper]);
+
+𝓕;
+
+
+/* TeX output */
+
+texput("<<", [ "\\left\\langle ", "\\right|" ], matchfix)$
+texput("|", [ "\\left|", "\\right\\rangle" ], matchfix)$
+texput(bra, "\\bra")$
+texput(ket, "\\ket")$
+texput("++", "^{\\dagger} ", postfix)$
+texput(".o.", "\\otimes ", nary)$
+texput("hbar", "\\hbar ")$
+texput("plus", "+")$
+texput("minus", "-")$
+
+
+tex_export(_file, [_L]) := block([],
+  /* TODO: check if name exists -> replace or append */
+  with_stdout(_file,
+    for i:0 thru length(_L)/2-1 do print(concat("\\newcommand{\\", _L[2*i+1], "}{\\ensuremath{", tex1(ev(_L[2*(i+1)])), "}}")))
+  );
+
+tex_export_params(_file) := block([],
+ with_stdout(_file, block([],
+   print("\\begin{align*}"),
+   for i:1 thru (length(arrayinfo(_mx_parameters))-2) do
+     block([param: ev(listarray(_mx_parameters)[i], nouns)],
+     print(concat(tex1(ev(arrayinfo(_mx_parameters)[i+2][1], nouns)), " &= ", tex1(param[1]), "\\mathrm{", tex1(param[2]),"}\\\\"))),
+   print("\\end{align*}")))
+);

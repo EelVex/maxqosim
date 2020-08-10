@@ -1,0 +1,260 @@
+/* maxqosim Maxima package for open quantum systems
+ *
+ * Copyright 2020 by Kostas Blekos, eelvex@gmail.com
+ *
+ * Released under the terms of the GNU General Public License
+ *
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+ */
+
+put('maxqosim,1,'version);
+
+/* */
+kronecker_product(matrix([1,0]),matrix([0,1]))$
+
+/* Constants */
+constants: [c=2.998e8, e0=1/mu0/c^2, hbar=1.055e-34, q=1.602e-19, kb=1.381e-23]$
+
+nary(".o.")$ 
+nary("⊗");
+postfix("++", 200)$ 
+postfix("†", 200);
+matchfix("|",">>");
+matchfix("<<","|");
+
+/* commutators */
+matchfix("{{","}}")$
+matchfix("[/","/]")$
+
+{{a,b}} := (a . b) + (b . a)$
+[/a,b/] := (a . b) - (b . a)$
+
+declare([bra, ket, id], nonscalar);
+
+|[L]>> := if length(L)=1 then ket(L[1]) else ket(L);
+<<[L]| := if length(L)=1 then bra(L[1]) else bra(L);
+
+isvector_ket(z) := matrixp(z) and matrix_size(z)[2] = 1;
+/* isvector_bra(z) := listp(z) or (matrixp(z) and matrix_size(z)[1] = 1)$ */
+isvector_bra(z) := matrixp(z) and matrix_size(z)[1] = 1;
+
+declare(annihilation_operator, feature);
+annihilation(x, [_L]) ::= buildq([x], declare(x, annihilation_operator), declare(x, nonscalar));
+declare([α, alpha], annihilation_operator);
+/* Annihilation operator */
+an(n):= (genmatrix(lambda([i,j], if j=i-1 then sqrt(i-1) else 0), n))++$
+/* number operator */
+nn(n):= (an(n))++ .an(n);
+
+bra_v(i, n) := genmatrix(lambda([k,j], if i=j then 1 else 0), 1, n)$
+ket_v(i, n) := (bra_v(i, n))++$
+
+/* simplification rules */
+block([simp:false,dotscrules:true,dotdistrib:true],
+  local(A,B,M,p,q,i,j,k,L,V,u,v,uu,vv,r,s,x,y,z,w),
+  matchdeclare([A,B,M], lambda([x], matrixp(x))),
+  matchdeclare([p,q], lambda([x], scalarp(x))),
+  matchdeclare([i,j,k], lambda([x], integerp(x))),
+  matchdeclare([L,V], lambda([x], listp(x))),
+  matchdeclare([u,v], lambda([x], isvector_ket(x))),
+  matchdeclare([uu,vv], lambda([x], isvector_bra(x))),
+  matchdeclare([r,s,t,rr], lambda([x], nonscalarp(x))),
+  matchdeclare([x,y,z,w], true),
+  matchdeclare([aa, bb, nn], lambda([x], featurep(x, annihilation_operator))),
+  matchdeclare(hh, freeof(".o.")),
+
+  defrule(ann_ops, aa, an(_space_dim)),
+  defrule(id_ops, id, ident(_space_dim)),
+  defrule(bras, bra(i), bra_v(i, _space_dim)),
+  defrule(kets, ket(i), ket_v(i, _space_dim)),
+
+  tellsimp(x†, x++),
+  tellsimp(x⊗y, x .o. y),
+
+  tellsimp(bra(x)++, ket(x)),
+  tellsimp(ket(x)++, bra(x)),
+  tellsimp((x . ket(y))++, bra(y) . (x++)),
+  tellsimp((p * ket(y))++, bra(y) . (p++)),
+  tellsimp((p * bra(y))++, ket(y) . (p++)),
+  tellsimp(p++, conjugate(p)),
+  tellsimpafter(A++, ctranspose(A)),
+
+  tellsimp(bra(x) . ket(x), 1),
+  tellsimp(ket(x) . bra(y), (ket(x) .o. bra(y))),
+
+  tellsimp(bra(i).ket(j), kron_delta(i,j)),
+  tellsimp(bra(i).(p*ket(j)), p*kron_delta(i,j)),
+  tellsimp(bra(L).ket(V), kron_delta(L,V)),
+  tellsimp(bra(L).(p*ket(V)), p*kron_delta(L,V)),
+  tellsimp(ket(L).ket(V), ket(flatten([L,V]))),
+  tellsimp(bra(L).bra(V), bra(flatten([L,V]))),
+
+  tellsimp(id . x, x),
+  tellsimp(x . id, x),
+
+  defrule(o1, (x .o. y) . (z .o. w), (x . z) .o. (y . w)),
+  /* tellsimp((s .o. t).(r .o. rr), (s . r).o.(t. rr)), */
+  defrule(o2, (x + y) .o. z, (x .o. z) +  (y .o. z)),
+  defrule(o3, x .o. (y + z), (x .o. y) +  (x .o. z)),
+  tellsimp((r*p) .o. y, p*(r .o. y)),
+  tellsimp(x .o. p, p*x),
+  tellsimp(p .o. x, p*x),
+  tellsimp(A .o. B, kronecker_product(A, B)),
+  /* declare(".o.",  nary), */
+
+  true);
+
+save_parameter([_L]) := block([], for i:1 thru length(_L) do _mx_parameters[_L[i][1]]: [_L[i][2], if length(_L[i])=3 then _L[i][3] else ""]);
+save_function([_L])  := block([], for i:1 thru length(_L) do _mx_functions[_L[i][1]]: _L[i][2]);
+
+get_parameter(_name) ::= buildq([_name], _mx_parameters[_name][1]);
+get_function(_name) ::= buildq([_name], _mx_functions[_name][1]);
+
+_param_env() := append(
+   map(lambda([x], x[1] = _mx_parameters[x[1]][1]), rest(arrayinfo(_mx_parameters), 2)),
+   map(lambda([x], block([], if stringp(x[1]) then eval_string(x[1]) else x[1]) = _mx_functions[x[1]]), rest(arrayinfo(_mx_functions), 2))
+   );
+
+
+/* convert symbolic to matrix forms */
+
+𝕳: hilbert;
+
+
+_matrices: [
+  /* Pauli matrices */
+  sigma['x]= matrix([0,1],[1,0]),
+  sigma['y]= matrix([0,-%i],[%i,0]),
+  sigma['z]= matrix([1,0],[0,-1]),
+
+ /* 3x3 Orbital angular momentum */
+ L['x]= 1/sqrt(2)*hbar*matrix([0,1,0],[1,0,1],[0,1,0]),
+ L['y]= 1/sqrt(2)*%i*hbar*matrix([0,-1,0],[1,0,-1],[0,1,0]),
+ L['z]= hbar*matrix([1,0,0],[0,0,0],[0,0,-1]),
+
+ /* Ladder operators */
+ sigma['plus]= 1/2*(sigma['x] + %i*sigma['y]),
+ sigma['minus]= 1/2*(sigma['x] - %i*sigma['y]),
+ L['plus]= L['x] + %i*L['y],
+ L['minus]= L['x] - %i*L['y],
+
+ true
+];
+
+/* convert non-atom definitions to atom ones */
+_toatom: [
+ σ['x]= _sigmax,
+ σ['y]= _sigmay,
+ σ['z]= _sigmaz,
+ σ['plus]=_sigmaplus,
+ σ['minus]=_sigmaminus,
+ sigma['x]= _sigmax,
+ sigma['y]= _sigmay,
+ sigma['z]= _sigmaz,
+ sigma['plus]=_sigmaplus,
+ sigma['minus]=_sigmaminus,
+ L['x]=_Lx,
+ L['y]=_Ly,
+ L['z]=_Lz,
+ L['plus]=_Lplus,
+ L['minus]=_Lminus,
+
+ true
+];
+_atom_mat: ev(_matrices,_toatom);
+
+
+_matrix_env(expr, _dim) := block([],
+ _space_dim: _dim,
+ apply1(ev(ev(expr,_toatom), _atom_mat), ann_ops, id_ops, bras, kets)
+ );
+
+hilbert(expr, space, ix) := block([_expr],
+  _expr: ev(expr, _matrices),
+  if emptyp(space) then return(ident(1)) else
+    if ix[1] # 1 then ident(space[1]) .o. hilbert(_expr, rest(space), ix-1) else
+     if length(ix)=1 then _matrix_env(_expr, space[1]) .o. ident(apply("*",rest(space))) else 
+      if atom(_expr) then _matrix_env(_expr, space[1]) else
+        if op(_expr) # ".o." then apply(op(_expr), map(lambda([x], hilbert(x, space, ix)), args(_expr))) else
+	 block([_tail],
+	   if length(args(_expr))=2 then _tail: args(_expr)[2] else _tail: rest(_expr),
+           hilbert(part(_expr,1),space, ix) .o. hilbert(_tail, rest(space), rest(ix)-1)
+	)
+  );
+
+rho_init(_state, _dim) := _matrix_env(ket(_state) .o. bra(_state), _dim);
+
+
+/* Form and solve Lindblad equation */
+𝓛: lindblad_eq;
+
+/* lindblad superoperator */
+lsup(f, rho) := f.rho.(f++) -1/2*{{(f++).f, rho}};
+
+_lindblad_rhs(_H, _rho, _F, _gamma) ::= buildq([_H, _rho, _F, _gamma], 
+  -%i/hbar*[/_H, _rho/] + sum(_gamma[i]*lsup(_F[i],_rho),i,1,length(listarray(_F)))
+  );
+
+array(null, -1);
+
+lindblad_eq(rho, _H, _F, _gamma) := block([_n, _rho, _eq],
+  _n: length(_H),
+  depends(_rho, t),
+  _rho: genmatrix(_rho, _n, _n),
+  _eq: diff(_rho, t) = _lindblad_rhs(_H, _rho, _F, _gamma),
+  ev(map("=", flatten(args(lhs(_eq))), flatten(args(rhs(_eq)))),_rho=rho)
+  );
+
+lindblad_solve(_H, _F, _gamma, _rho0, _t0, _tfin, _dt) := block([_n, _rho, _eq, _sys, _solv],
+  _n: length(_H),
+  _rho: genmatrix(lambda([i,j], concat('_rho,i,j)), _n, _n),
+  _sys: ev(subst(_param_env(), map(lambda([x], flatten(args(x))), [_lindblad_rhs(_H, _rho, _F, _gamma), _rho, _rho0, matrix([t, _t0, _tfin, _dt])])),_param_env()),
+  _solv: apply(rk, _sys),
+  [map(lambda([x], x[1]), _solv), map(lambda([x], genmatrix(lambda([i,j],rest(x)[1+mod(j-1,_n) + _n*(i-1)]),_n,_n)), _solv)]
+  );
+
+lindblad_fortran(_H, _F, _gamma, _rho0, _t0, _tfin, _dt, _Nout, _file) := block([_n, rho, _eq, _sys],
+  _n: length(_H),
+  rho: genmatrix(rho, _n, _n),
+  _sys: ev(subst(_param_env(), map(lambda([x], flatten(args(x))), [_lindblad_rhs(_H, rho, _F, _gamma), rho, _rho0, matrix([t, _t0, _tfin, _dt])])),_param_env(),numer),
+  load(f90),
+  with_stdout("f90_template/parameters.F90",
+    print(concat("#define mx_Nout ",string(_Nout))),
+    print(concat("#define mx_t0 ",string(ev(_t0,_param_env())))),
+    print(concat("#define mx_tfin ",string(ev(_tfin,_param_env())))),
+    print(concat("#define mx_dt ",string(_dt))),
+    print(concat("#define mx_rho0 reshape(", string(flatten(args(_rho0))),",",string([_n,_n]),")")),
+    print(concat("#define mx_file ", string(_file)))
+    ),
+  with_stdout("f90_template/equations.F90",
+    genmatrix(lambda([i,j], f90(rhodot(i,j) = _sys[1][1+mod(j-1,_n) + _n*(i-1)])), _n, _n)),
+  system("cd f90_template/; make && ./main")
+  );
+
+read_results(_file) := block([_solv,_n],
+  _solv: read_nested_list(_file),
+  _n: sqrt(length(_solv[1])-1),
+  [map(lambda([x], x[1]), _solv), map(lambda([x], genmatrix(lambda([i,j],rest(x)[1+mod(j-1,_n) + _n*(i-1)]),_n,_n)), _solv)]
+  );
+
+/* plots */
+plot_rho(_t, _rho, [_L]) := block([points],
+  for j:1 thru length(_L) do points[j]: makelist([_t[i], _rho[i][_L[j][1]][_L[j][2]]],i,1,length(_t)), 
+  legends: append([legend], makelist(concat("ρ",_L[i][1],_L[i][2]), i, 1, length(_L))),
+  plot2d(makelist([discrete, points[i]], i, 1, length(_L)), legends)
+  );
+
+
+/* EOF */
