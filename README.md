@@ -9,3 +9,19 @@ symbolic manipulation of equations relevant to quantum open systems theory and
 their efficient numerical simulation.
 `maxqosim` package aims to be a tool for reproducible, extendable and efficient research
 in quantum open systems.
+
+**Publication:**
+https://doi.org/10.1016/j.simpa.2020.100031
+
+**Bib Record:**
+```bibtex
+@article{blekos2020efficient,
+  title={Efficient and reproducible research in quantum open systems %
+  	using Maxima with a Fortran interface},
+  author={Blekos, Kostas},
+  journal={Software Impacts},
+  pages={100031},
+  year={2020},
+  publisher={Elsevier}
+}
+```
