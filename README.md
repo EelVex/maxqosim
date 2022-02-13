@@ -25,3 +25,42 @@ https://doi.org/10.1016/j.simpa.2020.100031
   publisher={Elsevier}
 }
 ```
+
+# Demo
+
+## Maxima
+
+Example maxima session:
+
+![maxima](doc/img/session.jpg)
+
+## LaTeX
+
+Using the maxima definitions above, the following tex file:
+
+```tex
+\documentclass{minimal}
+\usepackage{amsmath}
+
+\let\it\relax
+
+\input{definitions}
+
+\begin{document}
+
+The interation Hamiltonian is \[ \hint{} \]
+
+The total Hamiltonian is \[ \Hamiltonian{} \]
+
+Parameters:
+
+\input{parameters}
+
+System equations: \[ \eqs{} \]
+	
+\end{document}
+```
+
+will compile to:
+
+![pdf output](doc/img/texout.png)
